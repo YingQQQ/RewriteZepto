@@ -1,0 +1,47 @@
+{ "extends": "eslint-config-airbnb",
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "rules": {
+    "new-cap": [2, { "capIsNewExceptions": ["List", "Map", "Set"] }],
+    "import/default": 0,
+    "import/no-duplicates": 0,
+    "import/named": 0,
+    "import/namespace": 0,
+    "import/no-unresolved": 0,
+    "import/no-named-as-default": 2,
+    "comma-dangle": 0,
+    "no-underscore-dangle": 'off',
+    "indent": [2, 2, {"SwitchCase": 1}],
+    "no-console": 0,
+    "no-alert": 0,
+    "import/no-extraneous-dependencies": "off",
+    "react/jsx-filename-extension": "off",
+    "global-require":"off",
+    "object-shorthand":"off",
+    "no-restricted-syntax" :"off",
+    "no-param-reassign":"off",
+    "import/no-mutable-exports":"off",
+    "func-names":"off",
+    "no-plusplus":"off",
+    "consistent-return":"off",
+    "no-nested-ternary":"off",
+    "no-cond-assign":"off",
+    "no-continue":"off",
+    "one-var":"off",
+    "no-confusing-arrow":"off",
+    "no-bitwise":"off",
+    "no-useless-return":"off",
+    "no-multi-assign":"off",
+    "prefer-rest-params":"off",
+    "no-eval":"off",
+    "prefer-arrow-callback":"off",
+  },
+  "settings": {
+    "import/parser": "babel-eslint",
+    "import/resolve": {
+      "moduleDirectory": ["node_modules", "src"]
+    }
+  },
+}

@@ -1,0 +1,6 @@
+/node_modules/*
+/dist/*
+zepto.js
+test.js
+fx.js
+touch.js

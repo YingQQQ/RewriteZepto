@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+
+  <ul id=items>
+    <li>List item 1 <span class=delete>DELETE</span></li>
+    <li>List item 2 <span class=delete>DELETE</span></li>
+  </ul>
+  <!-- <ul class="content" style="position:relative">
+    <div class="444">
+      <li>list item 1</li>
+      <li id="has" class="yaotaiyang">list item 2</li>
+      <li>list item 3</li>
+    </div>
+      <h1>asdasd</h1>
+      <input type="text" name="123" value="321">
+      <p id="aaaa">a paragraph in ul</p>
+      <a href="www.bai.com">baidu</a>
+  </ul>
+  <div id="abc" class="ok" style="position:relative">
+    <div class="ex1">2</div>
+    <div class="ex1">3</div>
+    <p id="aaaa">a paragraph in div</p>
+  </div> -->
+  <!-- <input class="taiyang yueliang" id="check1" type="checkbox" checked="checked">
+  <input class="yaotaiyang" id="check2"> -->
+
+  <script  type="text/javascript" src='./src/zepto-es6.js'></script>
+  <!-- <script type="text/javascript" src='./zepto.js'></script>
+  <script type="text/javascript" src='./touch.js'></script> -->
+  <!-- <script  type="text/javascript" src='./fx.js'></script> -->
+  <!-- <script type="text/javascript" src='./jquery-3.1.1.js'></script> -->
+  <script type="text/javascript">
+    $(function(){
+      // $('#items li').swipe(function(){
+      //   console.log('123');
+      // });
+      $('.delete').singleTap(function(){
+        console.log('abc');
+      })
+    });
+  </script>
+</body>
+</html>
