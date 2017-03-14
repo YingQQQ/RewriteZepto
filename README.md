@@ -1,2 +1,2 @@
 # RewriteZepto
-Rewrite Zepto.js
+Rewrite Zepto.js use ES6
