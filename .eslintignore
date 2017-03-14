@@ -1,6 +1,4 @@
 /node_modules/*
 /dist/*
-zepto.js
+/zeptoSrc/
 test.js
-fx.js
-touch.js

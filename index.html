@@ -32,18 +32,75 @@
   <input class="yaotaiyang" id="check2"> -->
 
   <script  type="text/javascript" src='./src/zepto-es6.js'></script>
-  <!-- <script type="text/javascript" src='./zepto.js'></script>
-  <script type="text/javascript" src='./touch.js'></script> -->
-  <!-- <script  type="text/javascript" src='./fx.js'></script> -->
-  <!-- <script type="text/javascript" src='./jquery-3.1.1.js'></script> -->
   <script type="text/javascript">
     $(function(){
-      // $('#items li').swipe(function(){
-      //   console.log('123');
+      // var callbacks = $.Callbacks('memory once');
+      // var b = function(b) {
+      //   console.log(b);
+      // }
+      // var c = function(val) {
+      //   console.log(`${val} world` );
+      // }
+      // var d = function(val) {
+      //   console.log(`${val} you` );
+      // }
+      // // var d = function(val) {
+      // //   console.log(val + 11 );
+      // // }
+      // callbacks.add(b);
+      // callbacks.fire('helo');
+      // callbacks.add(c);
+      // callbacks.add(d);
+      // var obj = {
+      //   hello: function( name ) {
+      //     console.log( "Hello " + name );
+      //   }
+      // },
+      // // Create a Deferred
+      // defer = $.Deferred();
+      // defer.resolve("first pipe");
+      // defer.pipe(function(data){
+      //     console.log(data);
+      //     var defer1 = $.Deferred();
+      //     setTimeout(function () {
+      //         defer1.resolve("second pipe");
+      //     },1000);
+      //     return defer1
+      // }).pipe(function (data) {
+      //     console.log(data);
       // });
-      $('.delete').singleTap(function(){
-        console.log('abc');
-      })
+    //   var filterResolve = function() {
+    //
+    //   var defer = $.Deferred(),
+    //       filtered = defer.then(function( value ) {
+    //         return defer;
+    //       });
+    //
+    //   defer.resolve( 5 );
+    //   // filtered.done(function( value ) {
+    //   //   console.log(value);
+    //   // });
+    // };
+    // filterResolve()
+    var defer1 = $.Deferred();
+            var defer2 = $.Deferred();
+            var defer3 = $.Deferred();
+
+            $.when(defer1,defer2,defer3).then(function (d1,d2,d3) {
+                console.log(d1);
+                console.log(d2);
+                console.log(d3);
+            });
+
+            setTimeout(function () {
+                defer1.resolve("defer1");
+            },1000);
+            setTimeout(function () {
+                defer2.resolve("defer2");
+            },2000);
+            setTimeout(function () {
+                defer3.resolve("defer3");
+            },3000);
     });
   </script>
 </body>

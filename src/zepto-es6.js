@@ -1020,7 +1020,7 @@
   };
 
   $.camelCase = str => str.replace(rdashAlpha, fcamelCase);
-
+  $.deserializeValue = deserializeValue;
   $.contains = (parent, node) => {
     if (document.documentElement.contains) {
       return parent !== node && parent.contains(node);
@@ -1080,9 +1080,19 @@
   $.grep = (arr, callback) => arr.filter.call(arr, callback);
 
   $.inArray = (element, arr, i) => !!~(emptyArray.indexOf.call(arr, element, i));
+  $.isEmptyObject = (obj) => {
+    for (const key in obj) {
+      if (hasOwnProperty.call(obj, key)) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   $.noop = function () {};
-
+  $.uuid = 0;
+  $.support = {};
+  $.expr = {};
   if (window.JSON) $.parseJSON = JSON.parse;
 
   $.trim = str => str != null ? String.prototype.trim.call(str) : '';
@@ -2235,5 +2245,463 @@
           return this.on(eventName, callback);
         };
       });
+  })($);
+  // zepto easy data store
+  (($) => {
+    const data = {},
+      exp = $.expando = `Zepto${Date.now()}`,
+      camelCase = $.camelCase;
+
+    const attributeData = (node) => {
+      const store = {};
+      (node.attributes || []).forEach((attr) => {
+        if (attr.name.indexOf('data-') === 0) {
+          store[camelCase(attr.name.replace('data-', ''))] = $.deserializeValue(attr.value);
+        }
+      });
+      return store;
+    };
+    // Store value under camelized key on node
+    const setData = (node, name, value) => {
+      const id = node[exp] || (node[exp] = ++$.uuid);
+      const store = data[id] || (data[id] = attributeData(node));
+      if (name !== undefined) {
+        store[camelCase(name)] = value;
+      }
+      return store;
+    };
+
+    // Get value from node:
+    // 1. first try key as given,
+    // 2. then try camelized key,
+    // 3. fall back to reading "data-*" attribute.
+    const getData = (node, name) => {
+      const id = node[exp];
+      const store = id && data[id];
+      let camelName;
+      return name === undefined ? (store || setData(node)) :
+        (store && name in store) ? store[name] :
+        (store && (camelName = camelCase(name))) ? store[camelName] :
+        $.fn.newData.call($(node), name);
+    };
+
+    $.fn.newData = function (name, value) {
+      return value === undefined ? $.isPlainObject(name) ?
+        this.dom.forEach((node) => {
+          $.each(name, (key, val) => {
+            setData(node, key, val);
+          });
+        }) : (0 in this.dom ? getData(this.dom[0], name) : undefined) :
+        this.dom.forEach((node) => {
+          setData(node, name, value);
+        });
+    };
+
+    $.data = (node, name, value) => $(node).newData(name, value);
+    $.hasData = (node) => {
+      const id = node[exp];
+      const store = id && data[id];
+      return store ? !$.isEmptyObject(store) : false;
+    };
+    $.removeNewData = function (names) {
+      let name;
+      if (typeof name === 'string') {
+        name = names.split(/\s+/);
+      }
+      return this.dom.forEach((node) => {
+        const id = node[exp];
+        const store = id && data[id];
+        if (store) {
+          name.forEach((na, i) => {
+            delete store[na ? camelCase(na) : i];
+          });
+        }
+      });
+    };
+  })($);
+  // jQuery.Callbacks
+  // once : 只触发一次
+  // momery ：保持以前的值和将添加到这个列表的后面的最新的值立即执行调用任何回调 (像一个递延 Deferred)
+  // unique: 确保一次只能添加一个回调(所以有没有在列表中的重复).
+  // stopOnFalse: 当一个回调返回false 时中断调用
+  (($) => {
+    const createOption = (option) => {
+      const object = {};
+      $.each((option.split(/\s+/) || []), (i, flag) => {
+        object[flag] = true;
+      });
+      return object;
+    };
+
+    $.Callbacks = (option) => {
+      const options = typeof option === 'string' ? createOption(option) : $.extend({}, option);
+      let list = [], //  存入函数的数组
+        queue = [],
+        locked,
+        memory, // 上一次调用的函数
+        fired, // 是否回调过
+        firing, // 回调函数列表是否正在执行中
+        firingIndex = -1; // 正在执行回调函数的索引
+
+      const fire = () => {
+        locked = options.once;
+        fired = firing = true;
+        for (; queue.length; firingIndex = -1) {
+          // 获得第一个数组
+          memory = queue.shift();
+          while (++firingIndex < list.length) {
+            if (list[firingIndex].apply(memory[0], memory[1]) === false && options.stopOnFalse) {
+              firingIndex = list.length;
+              memory = false;
+            }
+          }
+        }
+        firing = false;
+        if (!options.memory) {
+          memory = false;
+        }
+        if (locked) {
+          if (memory) {
+            list = [];
+          } else {
+            list = '';
+          }
+        }
+      };
+
+      const Callbacks = {
+        add() {
+          if (list) {
+            if (memory && !firing) {
+              firingIndex = list.length - 1;
+              queue.push(memory);
+            }
+            const add = (...args) => {
+              $.each(...args, (i, arg) => {
+                if (typeof arg === 'function' && !options.unique && !Callbacks.has(arg)) {
+                  list.push(arg);
+                } else if (arg && arg.length && typeof arg !== 'string') {
+                  // [fn,fn]
+                  add(arg);
+                }
+              });
+            };
+            add(arguments);
+            if (memory && !firing) {
+              fire();
+            }
+          }
+          return this;
+        },
+        remove() {
+          if (list) {
+            $.each(arguments, (i, arg) => {
+              let index;
+              while ((index = list.indexOf(arg, index)) > -1) {
+                list.splice(index, 1);
+                if (index <= firingIndex) {
+                  firingIndex--;
+                }
+              }
+            });
+          }
+          return this;
+        },
+        fire() {
+          return Callbacks.fireWith(this, arguments);
+        },
+        fireWith(context, args = []) {
+          if (!locked) {
+            const newArgs = [context, args.slice ? args.slice() : args];
+            queue.push(newArgs);
+            if (!firing) {
+              fire();
+            }
+          }
+          return this;
+        },
+        has(fn) {
+          return fn ? $.inArray(fn, list) : list.length > 0;
+        },
+        disable() {
+          locked = queue = [];
+          list = memory = '';
+          return this;
+        },
+        fired() {
+          return !!fired;
+        },
+        empty() {
+          list = [];
+          return this;
+        },
+        lock() {
+          locked = queue = [];
+          if (!memory && !firing) {
+            list = memory = '';
+          }
+          return this;
+        },
+        locked() {
+          return !!locked;
+        }
+      };
+      return Callbacks;
+    };
+  })($);
+  (($) => {
+    const Identity = v => v;
+    const Thrower = ex => ex;
+    const adoptValue = (value, resolve, reject) => {
+      let method;
+      try {
+        if (value && $.isFunction((method = value.promise))) {
+          method.call(value).done(resolve).fail(reject);
+        } else if (value && $.isFunction((method = value.then))) {
+          method.call(value, resolve, reject);
+        } else {
+          resolve.call(undefined, value);
+        }
+      } catch (e) {
+        reject.call(undefined, e);
+      }
+    };
+
+    $.Deferred = function (func) {
+      const tuples = [
+        ['notify', 'progress', $.Callbacks('memory'),
+          $.Callbacks('memory'), 2],
+        ['resolve', 'done', $.Callbacks('memory once'),
+          $.Callbacks('memory once'), 0, 'resolved'],
+        ['reject', 'fail', $.Callbacks('memory once'),
+          $.Callbacks('memory once'), 1, 'rejected']
+      ];
+      let state = 'pending';
+
+      const deferred = {},
+        promise = {
+          state() {
+            return state;
+          },
+          always() {
+            // deferred.done 返回的是Callbacks 对象
+            // done fail 其实都是Callbacks.add方法
+            deferred.done(arguments)
+              .fail(arguments);
+            return this;
+          },
+          'catch'(fn) {
+            return promise.then(null, fn);
+          },
+          pipe(/* fnDone, fnFail, fnProgress */) {
+            // 被弃用的方法 建议使用then
+            let fns = arguments;
+            // 注意，这无论如何都会返回一个新的Deferred只读副本，
+            // 所以正常为一个deferred添加成功，失败，千万不要用pipe，用done，fail
+            return $.Deferred((newDefer) => {
+              tuples.forEach((tuple) => {
+                // 通过适配先判断参数的类型， 然后获得对象
+                const fn = $.isFunction(fns[tuple[4]]) && fns[tuple[4]];
+                // Callbacks.add
+                deferred[tuple[1]]((...argus) => {
+                  // 因为Callbacks('memory') 因此调用fn的时候传入的是
+                  // 第一次$.Deferred中resolve()中的arguments
+                  const returned = fn && fn.apply(this, argus);
+                  if (returned && $.isFunction(returned.promise)) {
+                    // Callbacks.add(fireWith)
+                    // 立刻触发下一个progress | done | fail
+                    returned.promise()
+                      .progress(newDefer.notify)
+                      .done(newDefer.resolve)
+                      .fail(newDefer.reject);
+                  } else {
+                    // 没有返回promise就直接调用Callbacks.fireWith
+                    newDefer[`${tuple[0]}With`](this,
+                      fn ? [returned] : arguments);
+                  }
+                });
+              });
+              fns = null;
+            })
+            .promise();
+          },
+
+          then(onFulfilled, onRejected, onProgress) {
+            let maxDepth = 0;
+            function resolve(depth, newDefer, handler, special) {
+              return (...args) => {
+                const mightThrow = () => {
+                  // let returned,
+                  //   then;
+                  if (depth < maxDepth) {
+                    return;
+                  }
+                  const returned = handler.apply(this, args);
+                  // newPromise1 = defer.then(function(){return newPromise});
+                  // newPromise在resolve时执行回调函数fn1，而fn1执行newPromise1的回调函数，
+                  // 若newPromise1 === newPromise，则会出现死循环
+                  if (returned === deferred.promise()) {
+                    throw new TypeError('Thenable self-resolution');
+                  }
+                  const then = returned && (typeof returned === 'function' ||
+                    typeof returned === 'object') && returned.then;
+                  // 处理 then的情况
+                  if ($.isFunction(then)) {
+                    // 正在进行的情况
+                    // 根据special 判断handler在哪个阶段(progress, resolve, reject)
+                    if (special) {
+                      then.call(
+                        returned,
+                        resolve(maxDepth, newDefer, Identity, special),
+                        resolve(maxDepth, newDefer, Thrower, special)
+                      );
+                    } else {
+                      // reslove || reject
+                      maxDepth++;
+                      then.call(
+                        returned,
+                        resolve(maxDepth, newDefer, Identity, special),
+                        resolve(maxDepth, newDefer, Thrower, special),
+                        resolve(maxDepth, newDefer, Identity, newDefer.notifyWith)
+                      );
+                    }
+                  } else {
+                    if (handler !== Identity) {
+                      args = [returned];
+                    }
+                    (special || newDefer.resolveWith)(undefined, args);
+                  }
+                };
+                const process = special ? mightThrow :
+                  function () {
+                    try {
+                      mightThrow();
+                    } catch (e) {
+                      if ($.Deferred.exceptionHook) {
+                        $.Deferred.exceptionHook(e,
+                          process.stackTrace);
+                      }
+                      if (depth + 1 >= maxDepth) {
+                        if (handler !== Thrower) {
+                          args = [e];
+                        }
+                        newDefer.rejectWith(undefined, args);
+                      }
+                    }
+                  };
+                if (depth) {
+                  process();
+                } else {
+                  if ($.Deferred.getStackHook) {
+                    process.stackTrace = $.Deferred.getStackHook();
+                  }
+                  window.setTimeout(process);
+                }
+              };
+            }
+            return $.Deferred((newDefer) => {
+              // 'progress'
+              tuples[0][3].add(
+                resolve(
+                  0,
+                  newDefer,
+                  $.isFunction(onProgress) ?
+                    onProgress :
+                    Identity,
+                  newDefer.notifyWith
+                )
+              );
+              // done
+              tuples[1][3].add(
+                resolve(
+                  0,
+                  newDefer,
+                  $.isFunction(onFulfilled) ?
+                    onFulfilled :
+                    Identity
+                )
+              );
+              // fail
+              tuples[2][3].add(
+                resolve(
+                  0,
+                  newDefer,
+                  $.isFunction(onRejected) ?
+                    onRejected :
+                    Thrower
+                )
+              );
+            }).promise();
+          },
+          promise(obj) {
+            return obj != null ? $.extend(obj, this) : this;
+          }
+        };
+
+      tuples.forEach((tuple, i) => {
+        const list = tuple[2],
+          stateString = tuple[5];
+        // 扩展promise的done、fail、progress为Callback的add方法，使其成为回调列表
+        // promise.progress = list.add
+        // promise.done = list.add
+        // promise.fail = list.add
+        promise[tuple[1]] = list.add;
+
+        // 切换的状态是resolve成功/reject失败
+        // 添加首组方法做预处理，修改state的值，使成功或失败互斥，锁定progress回调列表
+        if (stateString) {
+          list.add(
+            function () {
+              state = stateString;
+            },
+            // rejected_callbacks.disable
+            // fulfilled_callbacks.disable
+            tuples[3 - i][2].disable,
+            tuples[0][2].lock
+          );
+        }
+        list.add(tuple[3].fire);
+        deferred[`${tuple[0]}With`] = list.fireWith;
+        // 添加切换状态方法 resolve()/resolveWith(),reject()/rejectWith(),notify()/notifyWith()
+        // 一般来说最后运行的函数
+        deferred[tuple[0]] = function () {
+          // 其实就是执行Callbacks.fireWith()
+          deferred[`${tuple[0]}With`](this === deferred ? undefined : this, arguments);
+          return this;
+        };
+      });
+      promise.promise(deferred);
+      if (func) {
+        func.call(deferred, deferred);
+      }
+      return deferred;
+    };
+    $.when = (...singleValue) => {
+      let remaining = singleValue.length,
+        i = remaining;
+      const resolveContexts = Array(i),
+        resolveValues = [...singleValue],
+        master = $.Deferred();
+
+      const updateFunc = idx => function (value) {
+        resolveContexts[idx] = this;
+        resolveValues[idx] = arguments.length > 1 ? [].slice.call(arguments) : value;
+        if (!(--remaining)) {
+          master.resolveWith(resolveContexts, resolveValues);
+        }
+      };
+
+      if (remaining <= 1) {
+        adoptValue(singleValue, master.done(updateFunc(i)).resolve, master.reject);
+        if (master.state() === 'pending' || $.isFunction(resolveValues[i] && resolveValues[i].then)) {
+          return master.then();
+        }
+      }
+      while (i--) {
+        adoptValue(resolveValues[i], updateFunc(i), master.reject);
+      }
+
+      return master.promise();
+    };
   })($);
 })(window);
